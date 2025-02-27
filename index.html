@@ -294,7 +294,7 @@ select:hover {
 
   <body>
     <div class="controls">
-      <button id="enableLocation">Enable Location</button>
+      <button id="selectFromMap">Select Location</button>
       <button id="disableLocation">Disable Location</button>
     </div>
 
@@ -395,41 +395,28 @@ select:hover {
   }
   setInterval(updateTime, 1000);
 
-  document
-    .getElementById("enableLocation")
-    .addEventListener("click", function () {
-      if (!navigator.geolocation) {
-        showToast("❌ Geolocation not supported.", "error");
-        return;
-      }
-
-      navigator.geolocation.watchPosition(
-        (position) => {
-          let lat = position.coords.latitude;
-          let lng = position.coords.longitude;
-          sendDriverLocationToServer(lat, lng);
-        },
-        (error) => {
-          showToast("❌ Failed to access location.", "error");
-        },
-        { enableHighAccuracy: true }
-      );
-
-      showToast("✅ Sharing location started!", "success");
-
-      if (!navigator.geolocation) {
-        showToast("❌ Geolocation not supported.", "error");
-        return;
-      }
-      trackingWatcher = navigator.geolocation.watchPosition(
-        updateUserLocation,
-        function () {
-          showToast("❌ Failed to access location.", "error");
-        },
-        { enableHighAccuracy: true }
-      );
-      showToast("✅ Location enabled!", "success");
-      document.getElementById("userRouteBtn").style.display = "block";
+  document.getElementById("selectFromMap").addEventListener("click", function () {
+        showToast("🗺️ Click on the map to select a location.", "info");
+    
+        // Add event listener to pick a location from the map
+        map.addEventListener("tap", function (evt) {
+            let clickedCoords = map.screenToGeo(evt.currentPointer.viewportX, evt.currentPointer.viewportY);
+            
+            // Update userLocation with the selected coordinates
+            userLocation = { lat: clickedCoords.lat, lng: clickedCoords.lng };
+    
+            // Remove old marker if exists
+            if (userLocationMarker) map.removeObject(userLocationMarker);
+    
+            // Add new marker
+            userLocationMarker = new H.map.Marker(userLocation);
+            map.addObject(userLocationMarker);
+    
+            showToast(`📍 Location selected: ${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}`, "success");
+    
+            // Enable the route button
+            document.getElementById("userRouteBtn").style.display = "block";
+        }, { once: true }); // Once a location is picked, remove the event listener
     });
 
   document
