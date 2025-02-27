@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Driver Route Selection</title>
+
+    <script src="https://js.api.here.com/v3/3.1/mapsjs-core.js"></script>
+    <script src="https://js.api.here.com/v3/3.1/mapsjs-service.js"></script>
+    <script src="https://js.api.here.com/v3/3.1/mapsjs-ui.js"></script>
+    <script src="https://js.api.here.com/v3/3.1/mapsjs-mapevents.js"></script>
+
+   <style>
+    /* Apply a blurry background */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: rgb(110, 123, 131) url("background.jpg") no-repeat center center
+    fixed;
+  background-size: cover;
+  backdrop-filter: blur(8px);
+  text-align: center;
+  color: rgb(239, 238, 238);
+}
+
+/* Heading Styles */
+h2 {
+  margin-top: 70px;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+/* Controls Section */
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+}
+
+/* Route Selection Container */
+.route-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Dropdown Styling */
+#start,
+#end {
+  font-size: 14px;
+  padding: 6px;
+  width: 150px;
+  height: 35px;
+  border-radius: 5px;
+}
+
+/* Show Route Button */
+#showRoute {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+#showRoute:hover {
+  background-color: #a0abb7;
+}
+
+/* Map Styling */
+#map {
+  width: 100%;
+  height: 600px;
+  margin: 10px auto;
+  border-radius: 10px;
+}
+
+/* Transparent Table Overlay */
+.info-table {
+  position: absolute;
+  top: 250px;
+  left: 35px;
+  background: rgba(6, 0, 6, 0.6);
+  padding: 25px;
+  border-radius: 15px;
+  color: white;
+  font-size: 15px;
+}
+
+/* Toast Notification Styling */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.toast {
+  background-color: rgba(132, 4, 4, 0.8);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.toast.show {
+  opacity: 1;
+}
+
+.success {
+  background-color: green;
+}
+.error {
+  background-color: red;
+}
+.info {
+  background-color: blue;
+}
+
+/* GPS Locator Button */
+#gpsLocator {
+  position: absolute;
+  bottom: 1px;
+  left: 150px;
+  width: 40px;
+  height: 40px;
+  background: rgb(255, 255, 255);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 4px 6px rgb(255, 255, 255);
+  cursor: pointer;
+  border: none;
+  font-size: 18px;
+  transition: background 0.3s ease;
+  z-index: 1000;
+}
+
+#gpsLocator:hover {
+  background: #452fd4;
+}
+
+/* Zoom In & Zoom Out Buttons */
+#zoomIn,
+#zoomOut {
+  position: absolute;
+  left: 150px;
+  width: 45px;
+  height: 45px;
+  background: rgb(255, 255, 255);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 4px 6px rgb(71, 7, 18);
+  cursor: pointer;
+  border: none;
+  font-size: 18px;
+  transition: background 0.3s ease;
+  z-index: 1000;
+}
+
+#zoomIn {
+  bottom: 130px;
+}
+
+#zoomOut {
+  bottom: 70px;
+}
+
+#zoomOut:hover {
+  background: #ff0000;
+}
+
+#zoomIn:hover {
+  background: #020ef7;
+}
+
+/* Mobile-Specific Adjustments */
+@media screen and (max-width: 768px) {
+  .route-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #start,
+  #end {
+    font-size: 12px;
+    padding: 5px;
+    width: 120px;
+    height: 30px;
+  }
+
+  /* Move "Show Route" button below */
+  #showRoute {
+    margin-top: 5px;
+    width: 13px;
+    font-size: 14px;
+    padding: 6px;
+  }
+
+  /* Adjust info-table and GPS button */
+  .info-table {
+    left: 10px;
+    padding: 15px;
+    font-size: 13px;
+  }
+
+  #gpsLocator {
+    left: 10px;
+    width: 35px;
+    height: 35px;
+    font-size: 16px;
+  }
+
+  #zoomIn,
+  #zoomOut {
+    left: 10px;
+    width: 35px;
+    height: 35px;
+    font-size: 16px;
+  }
+
+  .controls select {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .controls button {
+    padding: 6px 0px;
+    font-size: 14px;
+  }
+}
+
+   </style>
+  </head>
+  <body>
+    <h2>Driver Route Selection</h2>
+
+    <div class="controls">
+      <button id="enableLocation">Enable Location</button>
+      <button id="disableLocation">Disable Location</button>
+    </div>
+
+    <div class="controls">
+      <label for="startPoint">Route</label>
+      <select id="startPoint">
+        <option value="12.9172,74.8560">🚌 Mangalore KSRTC</option>
+        <option value="12.9716,77.5946">🚌 Majestic, Bengaluru</option>
+        <option value="13.3409,74.7421">🚌 Udupi</option>
+        <option value="14.4530,75.9215">🚌 Shivamogga</option>
+        <option value="15.3647,75.1239">🚌 Hubli</option>
+        <option value="15.8497,74.4977">🚌 Belagavi</option>
+        <option value="12.2958,76.6394">🚌 Mysuru</option>
+      </select>
+
+      <label for="endPoint"></label>
+      <select id="endPoint">
+        <option value="12.9172,74.8560">🚌 Mangalore KSRTC</option>
+        <option value="12.9716,77.5946">🚌 Majestic, Bengaluru</option>
+        <option value="13.3409,74.7421">🚌 Udupi</option>
+        <option value="14.4530,75.9215">🚌 Shivamogga</option>
+        <option value="15.3647,75.1239">🚌 Hubli</option>
+        <option value="15.8497,74.4977">🚌 Belagavi</option>
+        <option value="12.2958,76.6394">🚌 Mysuru</option>
+      </select>
+      <button id="routeBtn">Show Route</button>
+      <button id="gpsLocator">⬤</button>
+      <button id="zoomIn">+</button>
+      <button id="zoomOut">−</button>
+    </div>
+
+    <!-- Map -->
+    <div id="map"></div>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+  const apiKey = "mzDLjmDOdq62sKIc4y81FgMv8pqj2ndZWPBraNyCm2w";
+  let platform = new H.service.Platform({ apikey: apiKey });
+  let defaultLayers = platform.createDefaultLayers();
+  let map = new H.Map(
+    document.getElementById("map"),
+    defaultLayers.vector.normal.map,
+    {
+      zoom: 7,
+      center: { lat: 14.5, lng: 75.5 },
+    }
+  );
+
+  let behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+  let ui = H.ui.UI.createDefault(map, defaultLayers);
+  let router = platform.getRoutingService(null, 8);
+
+  let blueRoute, yellowRoute, userLocationMarker;
+  let userLocation = null;
+  let trackingWatcher = null;
+
+  function showToast(message, type) {
+    const toastContainer = document.getElementById("toastContainer");
+    if (!toastContainer) return;
+    const toast = document.createElement("div");
+    toast.className = `toast ${type} show`;
+    toast.innerText = message;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.remove("show");
+      setTimeout(() => toast.remove(), 500);
+    }, 5000);
+  }
+
+  function removePreviousRoute(route) {
+    if (route) map.removeObject(route);
+    return null;
+  }
+
+  function updateUserLocation(position) {
+    userLocation = {
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+    };
+    if (userLocationMarker) map.removeObject(userLocationMarker);
+    userLocationMarker = new H.map.Marker(userLocation);
+    map.addObject(userLocationMarker);
+  }
+
+  function updateTable(distance, duration) {
+    document.getElementById("distance").innerText = distance.toFixed(2) + " km";
+    document.getElementById("estimatedTime").innerText =
+      Math.round(duration) + " min";
+  }
+
+  function updateTime() {
+    let now = new Date();
+    document.getElementById("currentTime").innerText = now.toLocaleTimeString();
+  }
+  setInterval(updateTime, 1000);
+
+  document
+    .getElementById("enableLocation")
+    .addEventListener("click", function () {
+      if (!navigator.geolocation) {
+        showToast("❌ Geolocation not supported.", "error");
+        return;
+      }
+
+      navigator.geolocation.watchPosition(
+        (position) => {
+          let lat = position.coords.latitude;
+          let lng = position.coords.longitude;
+          sendDriverLocationToServer(lat, lng);
+        },
+        (error) => {
+          showToast("❌ Failed to access location.", "error");
+        },
+        { enableHighAccuracy: true }
+      );
+
+      showToast("✅ Sharing location started!", "success");
+
+      if (!navigator.geolocation) {
+        showToast("❌ Geolocation not supported.", "error");
+        return;
+      }
+      trackingWatcher = navigator.geolocation.watchPosition(
+        updateUserLocation,
+        function () {
+          showToast("❌ Failed to access location.", "error");
+        },
+        { enableHighAccuracy: true }
+      );
+      showToast("✅ Location enabled!", "success");
+      document.getElementById("userRouteBtn").style.display = "block";
+    });
+
+  document
+    .getElementById("disableLocation")
+    .addEventListener("click", function () {
+      if (trackingWatcher) navigator.geolocation.clearWatch(trackingWatcher);
+      trackingWatcher = null;
+      userLocation = null;
+      if (userLocationMarker) map.removeObject(userLocationMarker);
+      blueRoute = removePreviousRoute(blueRoute);
+      showToast("❌ Location disabled!", "error");
+      document.getElementById("userRouteBtn").style.display = "none";
+    });
+
+  function calculateRoute(start, end, color, isUserRoute) {
+    let routingParams = {
+      transportMode: "car",
+      origin: `${start[0]},${start[1]}`,
+      destination: `${end[0]},${end[1]}`,
+      return: "polyline,summary",
+    };
+
+    router.calculateRoute(
+      routingParams,
+      (result) => {
+        if (result.routes.length === 0) {
+          showToast("❌ No route found.", "error");
+          return;
+        }
+
+        let routeShape = result.routes[0].sections[0].polyline;
+        let routePoints = H.geo.LineString.fromFlexiblePolyline(routeShape);
+        let newRoute = new H.map.Polyline(routePoints, {
+          style: { strokeColor: color, lineWidth: 5 },
+        });
+
+        if (isUserRoute) {
+          // ✅ Remove old blue route before adding a new one
+          blueRoute = removePreviousRoute(blueRoute);
+          blueRoute = newRoute;
+
+          let summary = result.routes[0].sections[0].summary;
+          updateTable(summary.length / 1000, summary.duration / 60);
+        } else {
+          // ✅ Remove old yellow route before adding a new one
+          yellowRoute = removePreviousRoute(yellowRoute);
+          yellowRoute = newRoute;
+        }
+
+        map.addObject(newRoute);
+        map.getViewModel().setLookAtData({ bounds: newRoute.getBoundingBox() });
+      },
+      () => showToast("❌ Failed to generate route.", "error")
+    );
+  }
+
+  function sendDriverLocationToServer(lat, lng) {
+    let startCoords = document
+      .getElementById("startPoint")
+      .value.split(",")
+      .map(Number);
+    let endCoords = document
+      .getElementById("endPoint")
+      .value.split(",")
+      .map(Number);
+
+    fetch("https://maj-65qm.onrender.com/update-location", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        start: startCoords,
+        end: endCoords,
+        lat: lat,
+        lng: lng,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        showToast("✅ Driver location updated!", "success");
+      })
+      .catch((error) => {
+        console.error("Error sending location:", error);
+        showToast("❌ Failed to update driver location.", "error");
+      });
+  }
+  function updateUserRoute() {
+    if (!userLocation) {
+      showToast("❌ Cannot find user location.", "error");
+      return;
+    }
+    let end = document.getElementById("endPoint").value.split(",");
+    let userStart = [userLocation.lat, userLocation.lng];
+    calculateRoute(userStart, end, "blue", true);
+  }
+
+  document.getElementById("routeBtn").addEventListener("click", function () {
+    let startCoords = document
+      .getElementById("startPoint")
+      .value.split(",")
+      .map(Number);
+    let endCoords = document
+      .getElementById("endPoint")
+      .value.split(",")
+      .map(Number);
+    updateUserRoute();
+    calculateRoute(startCoords, endCoords, "yellow", false);
+  });
+
+  let idleTimer = null;
+
+  function zoomToUserLocation() {
+    if (userLocation) {
+      map.setCenter(userLocation);
+      map.setZoom(15); // Adjust zoom level as needed
+    } else {
+      showToast("❌ Location not available.", "error");
+    }
+  }
+
+  // Reset idle timer on user interaction
+  function resetIdleTimer() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(zoomToUserLocation, 10000); // Auto-zoom after 10 sec of inactivity
+  }
+
+  // Detect user activity
+  map.addEventListener("pointerdown", resetIdleTimer);
+  map.addEventListener("wheel", resetIdleTimer);
+  map.addEventListener("touchstart", resetIdleTimer);
+  map.addEventListener("dragstart", resetIdleTimer);
+
+  // Manual button click
+  document
+    .getElementById("gpsLocator")
+    .addEventListener("click", zoomToUserLocation);
+
+  document.getElementById("zoomIn").addEventListener("click", function () {
+    let currentZoom = map.getZoom();
+    map.setZoom(currentZoom + 1);
+  });
+
+  document.getElementById("zoomOut").addEventListener("click", function () {
+    let currentZoom = map.getZoom();
+    map.setZoom(currentZoom - 1);
+  });
+});
+
+</script>
+    <!-- Transparent Table Overlay -->
+    <div class="info-table">
+      <table>
+        <tr>
+          <td>⏳ Current Time:</td>
+          <td id="currentTime">--:--:--</td>
+        </tr>
+        <tr>
+          <td>📍 Distance to Destination:</td>
+          <td id="distance">-- km</td>
+        </tr>
+        <tr>
+          <td>🚗 Approximate Time:</td>
+          <td id="estimatedTime">-- min</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script type="module" src="script.js"></script>
+  </body>
+</html>
